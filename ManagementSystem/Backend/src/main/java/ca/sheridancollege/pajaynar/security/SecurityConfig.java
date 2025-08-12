@@ -50,7 +50,7 @@ public class SecurityConfig {
 				CorsConfiguration corsConfig = new CorsConfiguration();
 				corsConfig.setAllowedOrigins(Arrays.asList(
 						"http://localhost:3000",
-						"http://localhost:5174",
+						"http://localhost:5173",
 						"http://localhost:4200"
 						));
 				

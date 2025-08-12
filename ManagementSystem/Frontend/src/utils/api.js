@@ -115,6 +115,49 @@ export const api = {
       method: 'DELETE'
     }),
 
+  // Project methods
+  getAllProjects: () => 
+    apiRequest('/api/projects'),
+
+  getProjectById: (projectId) => 
+    apiRequest(`/api/projects/${projectId}`),
+
+  createProject: (projectData) => 
+    apiRequest('/api/projects', {
+      method: 'POST',
+      body: JSON.stringify(projectData)
+    }),
+
+  updateProject: (projectId, projectData) => 
+    apiRequest(`/api/projects/${projectId}`, {
+      method: 'PUT',
+      body: JSON.stringify(projectData)
+    }),
+
+  deleteProject: (projectId) => 
+    apiRequest(`/api/projects/${projectId}`, {
+      method: 'DELETE'
+    }),
+
+  getProjectsByCategory: (category) => 
+    apiRequest(`/api/projects/category/${category}`),
+
+  searchProjects: (keyword) => 
+    apiRequest(`/api/projects/search?keyword=${encodeURIComponent(keyword)}`),
+
+  getProjectTeamMembers: (projectId) => 
+    apiRequest(`/api/projects/${projectId}/team`),
+
+  addTeamMember: (projectId, userId) => 
+    apiRequest(`/api/projects/${projectId}/team/${userId}`, {
+      method: 'POST'
+    }),
+
+  removeTeamMember: (projectId, userId) => 
+    apiRequest(`/api/projects/${projectId}/team/${userId}`, {
+      method: 'DELETE'
+    }),
+
   // User methods
   getUserProfile: () => 
     apiRequest('/api/users/profile'),
