@@ -31,75 +31,121 @@ import {
   ClockIcon
 } from '@radix-ui/react-icons';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { issueService } from '@/services/issueService';
+import projectService from '@/services/projectService';
+import commentService from '@/services/commentService';
+import CreateTaskForm from '../NewTask/CreateTaskForm';
+import { toast } from 'react-hot-toast';
 
 const ShowTask = () => {
   const { projectId, taskId } = useParams();
   const navigate = useNavigate();
   const [task, setTask] = useState(null);
+  const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  // Mock data for demonstration - replace with actual API call
+  // Load comments for the task
+  const loadComments = async () => {
+    try {
+      console.log(`🔄 Loading comments for task: ${taskId}`);
+      const commentsData = await commentService.getCommentsByIssueId(taskId);
+      setComments(commentsData);
+      console.log('📝 Comments loaded:', commentsData);
+    } catch (error) {
+      console.error('❌ Error loading comments:', error);
+      toast.error('Failed to load comments');
+    }
+  };
+
+  // Handle comment submission
+  const handleSubmitComment = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim()) {
+      toast.error('Please enter a comment');
+      return;
+    }
+
+    setIsSubmittingComment(true);
+    try {
+      console.log(`📝 Submitting comment for task: ${taskId}`);
+      const createdComment = await commentService.createComment(taskId, newComment.trim());
+      
+      // Add the new comment to the list
+      setComments(prevComments => [...prevComments, createdComment]);
+      setNewComment('');
+      toast.success('Comment added successfully');
+      console.log('✅ Comment submitted:', createdComment);
+    } catch (error) {
+      console.error('❌ Error submitting comment:', error);
+      toast.error('Failed to add comment');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  // Handle comment deletion
+  const handleDeleteComment = async (commentId) => {
+    try {
+      console.log(`🗑️ Deleting comment: ${commentId}`);
+      await commentService.deleteComment(commentId);
+      
+      // Remove the comment from the list
+      setComments(prevComments => prevComments.filter(comment => comment.id !== commentId));
+      toast.success('Comment deleted successfully');
+      console.log('✅ Comment deleted');
+    } catch (error) {
+      console.error('❌ Error deleting comment:', error);
+      toast.error('Failed to delete comment');
+    }
+  };
+
+  // Fetch task details and project details from backend
   useEffect(() => {
-    const fetchTask = async () => {
+    const fetchTaskAndProject = async () => {
       try {
         setLoading(true);
-        // TODO: Replace with actual API call
-        // const response = await fetch(`/api/issues/${taskId}`);
-        // const taskData = await response.json();
+        setError(null);
         
-        // Mock data based on Issue entity structure
-        const mockTask = {
-          id: taskId,
-          title: "Implement User Authentication",
-          description: "Create a comprehensive user authentication system with login, register, and password reset functionality. This should include JWT token management and proper security measures.",
-          status: "IN_PROGRESS",
-          priority: "HIGH",
-          dueDate: "2025-08-15",
-          tags: ["backend", "security", "authentication", "urgent"],
-          assignee: {
-            id: 1,
-            username: "john.doe",
-            name: "John Doe",
-            email: "john.doe@example.com"
-          },
-          project: {
-            id: projectId,
-            name: "Project Management System",
-            description: "A comprehensive project management solution"
-          },
-          comments: [
-            {
-              id: 1,
-              content: "Started working on the JWT implementation",
-              createdAt: "2025-08-05T10:30:00",
-              author: {
-                name: "John Doe",
-                username: "john.doe"
-              }
-            },
-            {
-              id: 2,
-              content: "Need to review the security requirements",
-              createdAt: "2025-08-06T14:15:00",
-              author: {
-                name: "Jane Smith",
-                username: "jane.smith"
-              }
-            }
-          ]
-        };
+        console.log(`Fetching task details for taskId: ${taskId}, projectId: ${projectId}`);
         
-        setTask(mockTask);
+        // Fetch task details
+        const [taskData, projectData] = await Promise.all([
+          issueService.getTaskById(taskId),
+          projectService.getProjectById(projectId)
+        ]);
+        
+        if (taskData) {
+          console.log('Task data received:', taskData);
+          setTask(taskData);
+        } else {
+          setError('Task not found');
+          toast.error('Task not found');
+        }
+
+        if (projectData) {
+          console.log('Project data received:', projectData);
+          setProject(projectData);
+        } else {
+          console.warn('Project data not found, task might still have project info');
+        }
+
+        // Load comments after task is loaded
+        await loadComments();
       } catch (err) {
-        setError('Failed to fetch task details');
-        console.error('Error fetching task:', err);
+        console.error('Error fetching task/project details:', err);
+        setError(err.message || 'Failed to fetch task details');
+        toast.error(err.message || 'Failed to fetch task details');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTask();
+    fetchTaskAndProject();
   }, [taskId, projectId]);
 
   const getPriorityColor = (priority) => {
@@ -120,10 +166,50 @@ const ShowTask = () => {
     }
   };
 
-  const handleStatusChange = (newStatus) => {
-    // TODO: Implement status update API call
-    console.log('Updating status to:', newStatus);
-    setTask(prev => ({ ...prev, status: newStatus }));
+  const handleStatusChange = async (newStatus) => {
+    try {
+      console.log('Updating task status to:', newStatus);
+      
+      const updatedTask = await issueService.updateIssueStatus(task.id, newStatus);
+      
+      if (updatedTask) {
+        setTask(updatedTask);
+        toast.success(`Task status updated to ${newStatus.toLowerCase().replace('_', ' ')}`);
+      }
+    } catch (err) {
+      console.error('Error updating task status:', err);
+      toast.error(err.message || 'Failed to update task status');
+    }
+  };
+
+  const handleDeleteTask = async () => {
+    if (window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+      try {
+        console.log('Deleting task:', task.id);
+        
+        await issueService.deleteIssue(task.id);
+        
+        toast.success('Task deleted successfully');
+        navigate(`/project/${projectId}`);
+      } catch (err) {
+        console.error('Error deleting task:', err);
+        toast.error(err.message || 'Failed to delete task');
+      }
+    }
+  };
+
+  const handleEditTask = () => {
+    console.log('✏️ Edit task clicked for:', task.title);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleTaskUpdated = async (updatedTask) => {
+    console.log('✅ Task updated successfully:', updatedTask);
+    setIsEditDialogOpen(false);
+    
+    // Update the task state with the new data
+    setTask(updatedTask);
+    toast.success('Task updated successfully');
   };
 
   const handleGoBack = () => {
@@ -176,9 +262,9 @@ const ShowTask = () => {
             Back to Project
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{task.title}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{task?.title || 'Task Details'}</h1>
             <p className="text-sm text-gray-500">
-              {task.project.name} • Task #{task.id}
+              {task?.project?.name || 'Project'} • Task #{task?.id || taskId}
             </p>
           </div>
         </div>
@@ -199,8 +285,13 @@ const ShowTask = () => {
             <DropdownMenuItem onClick={() => handleStatusChange('DONE')}>
               Mark as Done
             </DropdownMenuItem>
-            <DropdownMenuItem>Edit Task</DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">Delete Task</DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleEditTask}>Edit Task</DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-red-600"
+              onClick={handleDeleteTask}
+            >
+              Delete Task
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -214,49 +305,79 @@ const ShowTask = () => {
               <CardTitle>Description</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700 leading-relaxed">{task.description}</p>
+              <p className="text-gray-700 leading-relaxed">{task?.description || 'No description provided'}</p>
             </CardContent>
           </Card>
 
           {/* Comments */}
           <Card>
             <CardHeader>
-              <CardTitle>Comments ({task.comments.length})</CardTitle>
+              <CardTitle>Comments ({comments.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-64">
                 <div className="space-y-4">
-                  {task.comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>
-                          {comment.author.name.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-sm">
-                            {comment.author.name}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(comment.createdAt).toLocaleDateString()}
-                          </span>
+                  {comments && comments.length > 0 ? (
+                    comments.map((comment) => (
+                      <div key={comment.id} className="flex gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback>
+                            {comment?.user?.fullName?.charAt(0) || comment?.user?.firstName?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">
+                                {comment?.user?.fullName || `${comment?.user?.firstName || ''} ${comment?.user?.lastName || ''}`.trim() || 'Unknown User'}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {comment?.createdDateTime ? new Date(comment.createdDateTime).toLocaleDateString() : 'Unknown date'}
+                              </span>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                  <DotsVerticalIcon className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteComment(comment.id)}
+                                  className="text-red-600"
+                                >
+                                  Delete Comment
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                          <p className="text-sm text-gray-700">{comment?.content || 'No content'}</p>
                         </div>
-                        <p className="text-sm text-gray-700">{comment.content}</p>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">No comments yet</p>
+                  )}
                 </div>
               </ScrollArea>
               <div className="mt-4 pt-4 border-t">
-                <div className="flex gap-2">
+                <form onSubmit={handleSubmitComment} className="flex gap-2">
                   <input
                     type="text"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Add a comment..."
                     className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isSubmittingComment}
                   />
-                  <Button size="sm">Post</Button>
-                </div>
+                  <Button 
+                    type="submit" 
+                    size="sm" 
+                    disabled={isSubmittingComment || !newComment.trim()}
+                  >
+                    {isSubmittingComment ? 'Posting...' : 'Post'}
+                  </Button>
+                </form>
               </div>
             </CardContent>
           </Card>
@@ -275,8 +396,8 @@ const ShowTask = () => {
                 <label className="text-sm font-medium text-gray-700 block mb-1">
                   Status
                 </label>
-                <Badge className={getStatusColor(task.status)}>
-                  {task.status.replace('_', ' ')}
+                <Badge className={getStatusColor(task?.status)}>
+                  {task?.status?.replace('_', ' ') || 'Unknown'}
                 </Badge>
               </div>
 
@@ -285,72 +406,146 @@ const ShowTask = () => {
                 <label className="text-sm font-medium text-gray-700 block mb-1">
                   Priority
                 </label>
-                <Badge className={getPriorityColor(task.priority)}>
-                  {task.priority}
+                <Badge className={getPriorityColor(task?.priority)}>
+                  {task?.priority || 'Not Set'}
                 </Badge>
               </div>
 
               {/* Assignee */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">
-                  Assignee
-                </label>
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>
-                      {task.assignee.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="text-sm font-medium">{task.assignee.name}</div>
-                    <div className="text-xs text-gray-500">@{task.assignee.username}</div>
+              {task?.assignee && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-2">
+                    Assignee
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>
+                        {task.assignee.name?.charAt(0) || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="text-sm font-medium">{task.assignee.name || 'Unknown User'}</div>
+                      <div className="text-xs text-gray-500">@{task.assignee.username || 'unknown'}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Due Date */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">
-                  Due Date
-                </label>
-                <div className="flex items-center gap-2 text-sm">
-                  <CalendarIcon className="h-4 w-4 text-gray-500" />
-                  {new Date(task.dueDate).toLocaleDateString()}
+              {task?.dueDate && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">
+                    Due Date
+                  </label>
+                  <div className="flex items-center gap-2 text-sm">
+                    <CalendarIcon className="h-4 w-4 text-gray-500" />
+                    {new Date(task.dueDate).toLocaleDateString()}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Tags */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">
-                  Tags
-                </label>
-                <div className="flex flex-wrap gap-1">
-                  {task.tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
+              {task?.tags && task.tags.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-2">
+                    Tags
+                  </label>
+                  <div className="flex flex-wrap gap-1">
+                    {task.tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Project Info */}
           <Card>
             <CardHeader>
-              <CardTitle>Project</CardTitle>
+              <CardTitle>Project Information</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {/* Project Name */}
               <div>
-                <div className="font-medium">{task.project.name}</div>
-                <div className="text-sm text-gray-500 mt-1">
-                  {task.project.description}
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  Project Name
+                </label>
+                <div className="font-medium">{project?.name || task?.project?.name || 'Unknown Project'}</div>
+              </div>
+
+              {/* Project Description */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  Description
+                </label>
+                <div className="text-sm text-gray-600">
+                  {project?.description || task?.project?.description || 'No description available'}
                 </div>
               </div>
+
+              {/* Project Status */}
+              {(project?.status || task?.project?.status) && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">
+                    Status
+                  </label>
+                  <Badge variant="outline" className="text-xs">
+                    {project?.status || task?.project?.status}
+                  </Badge>
+                </div>
+              )}
+
+              {/* Project Owner */}
+              {(project?.owner || task?.project?.owner) && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">
+                    Project Owner
+                  </label>
+                  <div className="text-sm">
+                    {project?.owner?.fullName || task?.project?.owner?.fullName || 'Unknown Owner'}
+                  </div>
+                </div>
+              )}
+
+              {/* Creation Date */}
+              {(project?.createdAt || task?.project?.createdAt) && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">
+                    Created On
+                  </label>
+                  <div className="text-sm text-gray-600">
+                    {new Date(project?.createdAt || task?.project?.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+              )}
+
+              {/* Team Size */}
+              {(project?.team || task?.project?.team) && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">
+                    Team Size
+                  </label>
+                  <div className="text-sm text-gray-600">
+                    {(project?.team?.length || task?.project?.team?.length || 0)} members
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
+      
+      {/* Edit Task Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <CreateTaskForm 
+          taskToEdit={task}
+          onTaskUpdated={handleTaskUpdated}
+          project={project}
+        />
+      </Dialog>
     </div>
   );
 };

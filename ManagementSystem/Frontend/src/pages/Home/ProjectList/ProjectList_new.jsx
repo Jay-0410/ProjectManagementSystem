@@ -3,17 +3,27 @@ import ProjectCard from './ProjectCard/ProjectCard';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { mockProjects, getProjectsByCategory, searchProjects, getProjectsByStatus } from '../../../utils/mockProjectData';
+import { calculateProjectStats } from '../../../utils/projectStats';
 import { api } from '../../../utils/api';
 
 const ProjectList = () => {
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
 
   // Load projects on component mount
   useEffect(() => {
     loadProjects();
   }, []);
+
+  // Calculate stats whenever projects change
+  useEffect(() => {
+    if (projects.length > 0) {
+      const calculatedStats = calculateProjectStats(projects);
+      setStats(calculatedStats);
+    }
+  }, [projects]);
 
   const loadProjects = async () => {
     try {
@@ -82,29 +92,34 @@ const ProjectList = () => {
           <p className="text-gray-600">Manage and track your project progress</p>
         </div>
 
-        {/* Project Statistics */}
+        {/* Enhanced Project Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card className="p-4">
             <h3 className="text-sm font-medium text-gray-500">Total Projects</h3>
-            <p className="text-2xl font-bold text-gray-900">{projects.length}</p>
+            <p className="text-2xl font-bold text-gray-900">{stats?.total || 0}</p>
           </Card>
           <Card className="p-4">
             <h3 className="text-sm font-medium text-gray-500">Active Projects</h3>
-            <p className="text-2xl font-bold text-green-600">
-              {projects.filter(p => p.status === 'ACTIVE').length}
-            </p>
+            <p className="text-2xl font-bold text-green-600">{stats?.active || 0}</p>
+            {stats?.overdue > 0 && (
+              <p className="text-xs text-red-600 mt-1">{stats.overdue} overdue</p>
+            )}
           </Card>
           <Card className="p-4">
             <h3 className="text-sm font-medium text-gray-500">Completed Projects</h3>
-            <p className="text-2xl font-bold text-blue-600">
-              {projects.filter(p => p.status === 'COMPLETED').length}
-            </p>
+            <p className="text-2xl font-bold text-blue-600">{stats?.completed || 0}</p>
+            {stats?.total > 0 && (
+              <p className="text-xs text-blue-600 mt-1">
+                {Math.round((stats.completed / stats.total) * 100)}% rate
+              </p>
+            )}
           </Card>
           <Card className="p-4">
             <h3 className="text-sm font-medium text-gray-500">Average Progress</h3>
-            <p className="text-2xl font-bold text-purple-600">
-              {projects.length > 0 ? Math.round(projects.reduce((sum, p) => sum + p.completionPercentage, 0) / projects.length) : 0}%
-            </p>
+            <p className="text-2xl font-bold text-purple-600">{stats?.averageProgress || 0}%</p>
+            {stats?.dueThisWeek > 0 && (
+              <p className="text-xs text-orange-600 mt-1">{stats.dueThisWeek} due this week</p>
+            )}
           </Card>
         </div>
 
