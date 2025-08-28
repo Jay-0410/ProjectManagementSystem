@@ -41,10 +41,26 @@ public class IssueServiceImpl implements IssueService {
 	}
 
 	@Override
-	public Issue createIssue(IssueRequest issueRequest, Users user) throws Exception {
-		
+	public Issue createIssue(Long issueId, IssueRequest issueRequest, Users user) throws Exception {
+		System.out.println("createIssue called with issueId: " + issueId + " and user: " + user.getUsername());
 		Project project = projectService.getProjectById(issueRequest.getProjectId());
 		
+		
+		if (issueId != null) {
+		    Issue existingIssue = getIssueById(issueId);
+		    existingIssue.setTitle(issueRequest.getTitle());
+		    existingIssue.setDescription(issueRequest.getDescription());
+		    existingIssue.setStatus(issueRequest.getStatus());
+		    existingIssue.setPriority(issueRequest.getPriority());
+		    existingIssue.setDueDate(issueRequest.getDueDate());
+		    existingIssue.setProject(project);
+		    existingIssue.setAssignee(
+		        issueRequest.getAssignee() != null 
+		            ? userService.findUserByUsername(issueRequest.getAssignee().getUsername()) 
+		            : null
+		    );
+		    return issueRepo.save(existingIssue);
+		}
 		Issue issue = new Issue();
 		issue.setTitle(issueRequest.getTitle());
 		issue.setDescription(issueRequest.getDescription());
@@ -53,16 +69,30 @@ public class IssueServiceImpl implements IssueService {
 		issue.setDueDate(issueRequest.getDueDate());
 //		issue.setProjectId(project.getId());
 		issue.setProject(project);
+		System.out.println("Assignee: " + issueRequest.getAssignee());
+		issue.setAssignee(issueRequest.getAssignee() != null ? userService.findUserByUsername(issueRequest.getAssignee().getUsername()) : null);
 		return issueRepo.save(issue);
 	}
 
 	@Override
 	public void deleteIssue(Long issueId, Users user) throws Exception {
+		System.out.println("deleteIssue called with issueId: " + issueId + " and user: " + user.getUsername());
 		Issue issue = getIssueById(issueId);
-		if ( issue.getAssignee() != null && !issue.getAssignee().getId().equals(user.getId())) {
+		if ( issue.getAssignee() != null && !issue.getAssignee().getUsername().equals(user.getUsername())) {
             throw new Exception ("You cannot delete this issue");
         }
 		issueRepo.deleteById(issueId);
+		System.out.println("Issue deleted: " + issueId);
+	}
+
+	
+
+	@Override
+	public Issue updateStatus(Long issueId, String status) throws Exception {
+		
+		Issue issue = getIssueById(issueId);
+		issue.setStatus(status);
+		return issueRepo.save(issue);
 	}
 
 	@Override
@@ -73,14 +103,5 @@ public class IssueServiceImpl implements IssueService {
 		
 		return issueRepo.save(issue);
 	}
-
-	@Override
-	public Issue updateStatus(Long issueId, String status) throws Exception {
-		
-		Issue issue = getIssueById(issueId);
-		issue.setStatus(status);
-		return issueRepo.save(issue);
-	}
-
 	
 }

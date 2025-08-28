@@ -26,11 +26,11 @@ public class MessageServiceImpl implements MessageService {
 	
 	
 	@Override
-	public Message sendMessage(Long senderId, Long projectId, String content) throws Exception {
+	public Message sendMessage(String token, Long projectId, String content) throws Exception {
 		
-		Users sender = userService.findUserById(senderId);
+		Users sender = userService.findUserProfileByToken(token);
 		Chat chat = projectService.getChatByProjectId(projectId);
-		
+		System.out.println("Sender: " + sender.getUsername());
 		Message message = new Message();
 		message.setContent(content);
 		message.setSender(sender);

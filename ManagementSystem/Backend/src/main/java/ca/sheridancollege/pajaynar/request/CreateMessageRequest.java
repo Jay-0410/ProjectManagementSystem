@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CreateMessageRequest {
 
-	private Long senderId;
+	private String token;
 	private String content;
 	private Long projectId;
 	

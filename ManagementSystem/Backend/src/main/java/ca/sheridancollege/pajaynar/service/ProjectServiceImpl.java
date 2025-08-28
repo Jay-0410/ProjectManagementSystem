@@ -37,6 +37,7 @@ public class ProjectServiceImpl implements ProjectService {
 		newProject.getTeam().add(user);
 		
 		// Save the project
+		
 		Project savedProject = projectRepo.save(newProject);
 		
 		//create chat and associate it with the project

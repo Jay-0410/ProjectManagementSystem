@@ -77,8 +77,9 @@ public class ProjectController {
             
             ) throws Exception {
 		System.out.println(userDetails.getUsername());
+		System.out.println("Getting no error Before this line");
 		Users user = userService.findUserByUsername(userDetails.getUsername());
-		
+		System.out.println("Getting no error After this line");
 		Project createdProject = projectService.createProject(project, user);
 		System.out.println(createdProject);
 		return ResponseEntity.status(HttpStatus.CREATED).body(createdProject);
@@ -95,6 +96,44 @@ public class ProjectController {
 		
 		Users user = userService.findUserByUsername(userDetails.getUsername());
 		Project updatedProject = projectService.updateProject(project, projectId, user.getId() );
+		
+		return new ResponseEntity<Project> (updatedProject, HttpStatus.OK);
+	}
+	
+	@PatchMapping("/{projectId}/status")
+	public ResponseEntity<Project> updateProjectStatus (
+			
+			@PathVariable Long projectId,
+			@RequestParam String status,
+			@AuthenticationPrincipal UserDetails userDetails
+			
+			) throws Exception {
+		
+		Users user = userService.findUserByUsername(userDetails.getUsername());
+		Project project = projectService.getProjectById(projectId);
+		
+		// Validate that user has permission to update this project
+		if (!project.getOwner().getId().equals(user.getId()) && 
+			!project.getTeam().contains(user)) {
+			return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+		}
+		
+		// Validate status values
+		String[] validStatuses = {"ACTIVE", "COMPLETED", "ON_HOLD", "CANCELLED"};
+		boolean isValidStatus = false;
+		for (String validStatus : validStatuses) {
+			if (validStatus.equals(status.toUpperCase())) {
+				isValidStatus = true;
+				break;
+			}
+		}
+		
+		if (!isValidStatus) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
+		
+		project.setStatus(status.toUpperCase());
+		Project updatedProject = projectService.updateProject(project, projectId, user.getId());
 		
 		return new ResponseEntity<Project> (updatedProject, HttpStatus.OK);
 	}

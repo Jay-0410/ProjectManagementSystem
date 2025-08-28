@@ -30,10 +30,8 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
 
-    // Slight delay to prevent flash, but quick enough to avoid noticeable lag
-    const timeoutId = setTimeout(checkAuthStatus, 100);
-    
-    return () => clearTimeout(timeoutId);
+    // Check immediately without delay for faster startup
+    checkAuthStatus();
   }, []);
 
   const login = (token, username) => {

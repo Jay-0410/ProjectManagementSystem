@@ -61,12 +61,13 @@ public class IssueController {
 			@AuthenticationPrincipal UserDetails userDetails
 			
 			) throws Exception {
+		System.out.println("Assignee: " + issue.getAssignee());
 		
 		Users user = userService.findUserByUsername(userDetails.getUsername());
 		
 		if ( user != null ) {
 			
-			Issue createdIssue = issueService.createIssue(issue, user);
+			Issue createdIssue = issueService.createIssue(null, issue, user);
 			
 			IssueDTO issueDTO = new IssueDTO();
 			issueDTO.setDescription(createdIssue.getDescription());
@@ -86,7 +87,34 @@ public class IssueController {
 		return null;
 	}
 	
-	@DeleteMapping("/issueId")
+	@PutMapping("/{issueId}")
+	public ResponseEntity<IssueDTO> updateIssue (
+            
+            @PathVariable Long issueId,
+            @RequestBody IssueRequest issue,
+            @AuthenticationPrincipal UserDetails userDetails
+            
+            ) throws Exception {
+        
+        Users user = userService.findUserByUsername(userDetails.getUsername());
+        System.out.println("Issue ID: " + issueId);
+        Issue updatedIssue = issueService.createIssue(issueId, issue, user);
+        
+        IssueDTO issueDTO = new IssueDTO();
+        issueDTO.setId(issueId);
+        issueDTO.setAssignee(updatedIssue.getAssignee() != null ? updatedIssue.getAssignee() : null);
+        issueDTO.setDescription(updatedIssue.getDescription());
+        issueDTO.setDueDate(updatedIssue.getDueDate());
+        issueDTO.setId(updatedIssue.getId());
+        issueDTO.setPriority(updatedIssue.getPriority());
+        issueDTO.setProject(updatedIssue.getProject());
+        issueDTO.setStatus(updatedIssue.getStatus());
+        issueDTO.setTitle(updatedIssue.getTitle());
+        issueDTO.setTags(updatedIssue.getTags());
+        return new ResponseEntity<IssueDTO> (issueDTO, HttpStatus.OK);
+            }
+	
+	@DeleteMapping("/{issueId}")
 	public ResponseEntity<MessageResponse> deleteIssue (
 			
 			@PathVariable Long issueId,
@@ -103,6 +131,7 @@ public class IssueController {
 		return new ResponseEntity<MessageResponse> (response, HttpStatus.OK);
 		
 	}
+		
 	
 	@PutMapping("/{issueId}/assignee/{userId}")
 	public ResponseEntity<Issue> addUserToIssue (

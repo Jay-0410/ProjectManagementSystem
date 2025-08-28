@@ -16,11 +16,16 @@ import {
   Star,
   GitBranch,
   Activity,
-  Clock
+  Clock,
+  CheckCircle,
+  Pause,
+  X,
+  Play
 } from "lucide-react";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CreateProjectForm from "../../../Navbar/NewProject/CreateProjectForm";
+import { getAuthHeaders, getApiUrl } from "../../../../config/dataSource";
 
 const ProjectCard = ({ 
   project = {
@@ -45,11 +50,21 @@ const ProjectCard = ({
     status: "ACTIVE"
   },
   onDelete,
+  onStatusUpdate, // New prop for status updates
   viewMode = 'grid'
 }) => {
   const navigate = useNavigate();
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  
+  // Project statuses with their display info
+  const projectStatuses = [
+    { value: 'ACTIVE', label: 'Active', icon: Play, color: 'text-green-600 bg-green-100' },
+    { value: 'COMPLETED', label: 'Completed', icon: CheckCircle, color: 'text-blue-600 bg-blue-100' },
+    { value: 'ON_HOLD', label: 'On Hold', icon: Pause, color: 'text-yellow-600 bg-yellow-100' },
+    { value: 'CANCELLED', label: 'Cancelled', icon: X, color: 'text-red-600 bg-red-100' }
+  ];
   
   // Calculate project statistics
   const totalTasks = project.issues?.length || 0;
@@ -59,15 +74,10 @@ const ProjectCard = ({
   // Use provided completion percentage or calculate from tasks
   const progressPercentage = project.completionPercentage ?? calculatedProgress;
   
-  // Get status color
-  const getStatusColor = (status) => {
-    switch (status?.toUpperCase()) {
-      case 'ACTIVE': return 'text-green-500';
-      case 'COMPLETED': return 'text-blue-500';
-      case 'ON_HOLD': return 'text-yellow-500';
-      case 'CANCELLED': return 'text-red-500';
-      default: return 'text-gray-500';
-    }
+  // Get status color and info
+  const getStatusInfo = (status) => {
+    const statusInfo = projectStatuses.find(s => s.value === status?.toUpperCase());
+    return statusInfo || { value: 'ACTIVE', label: 'Active', icon: Play, color: 'text-gray-600 bg-gray-100' };
   };
 
   // Get progress color
@@ -76,6 +86,47 @@ const ProjectCard = ({
     if (percentage >= 50) return 'bg-blue-500';
     if (percentage >= 25) return 'bg-yellow-500';
     return 'bg-red-500';
+  };
+
+  // Handle status update
+  const handleStatusUpdate = async (newStatus) => {
+    if (isUpdatingStatus) return;
+    
+    try {
+      setIsUpdatingStatus(true);
+      console.log(`🔄 Updating project ${project.id || project.projectId} status to ${newStatus}`);
+      
+      const projectId = project.id || project.projectId;
+      const response = await fetch(getApiUrl(`/api/project/${projectId}/status?status=${newStatus}`), {
+        method: 'PATCH',
+        headers: getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const updatedProject = await response.json();
+      
+      // Update local project state if we have an onStatusUpdate callback
+      if (onStatusUpdate) {
+        await onStatusUpdate(projectId, newStatus);
+      } else {
+        // Force a re-render by updating the project in place
+        project.status = newStatus;
+        // Trigger a re-render by updating parent state if available
+        if (window.location.pathname === '/') {
+          window.location.reload(); // Simple refresh for now
+        }
+      }
+
+      console.log('✅ Project status updated successfully');
+      
+    } catch (error) {
+      console.error('❌ Error updating project status:', error);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   const handleCardClick = (e) => {
@@ -148,11 +199,19 @@ const ProjectCard = ({
             <h3 className="text-xl font-bold text-white line-clamp-1 mb-1">
               {project.name || project.projectName}
             </h3>
-            <div className="flex items-center">
-              <Activity className="h-4 w-4 text-white/90" />
-              <span className="text-sm text-white/90 capitalize">
-                {project.status?.toLowerCase().replace('_', ' ') || 'active'}
-              </span>
+            <div className="flex items-center gap-2">
+              {(() => {
+                const statusInfo = getStatusInfo(project.status);
+                const StatusIcon = statusInfo.icon;
+                return (
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/20 backdrop-blur-sm">
+                    <StatusIcon className="h-3 w-3 text-white" />
+                    <span className="text-xs font-medium text-white">
+                      {statusInfo.label}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           </div>
           
@@ -161,20 +220,56 @@ const ProjectCard = ({
             <DropdownMenuTrigger className="dropdown-trigger p-2 rounded-lg hover:bg-white/20 transition-colors opacity-70 hover:opacity-100 focus:opacity-100">
               <MoreVertical className="h-4 w-4 text-white" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40 dropdown-content">
+            <DropdownMenuContent align="end" className="w-48 dropdown-content">
               <DropdownMenuItem onClick={() => navigate(`/project/${project.id || project.projectId}`)}>
+                <Eye className="h-4 w-4 mr-2" />
                 View Details
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleEditClick}>
+                <Edit3 className="h-4 w-4 mr-2" />
                 Edit Project
               </DropdownMenuItem>
-              <DropdownMenuItem>Share</DropdownMenuItem>
+              
+              {/* Status submenu */}
+              <div className="border-t border-gray-100 my-1"></div>
+              <div className="px-2 py-1">
+                <div className="text-xs font-medium text-gray-500 mb-1">Change Status</div>
+                {projectStatuses.map((status) => {
+                  const StatusIcon = status.icon;
+                  const isCurrentStatus = status.value === project.status?.toUpperCase();
+                  return (
+                    <button
+                      key={status.value}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isCurrentStatus) {
+                          handleStatusUpdate(status.value);
+                        }
+                      }}
+                      disabled={isCurrentStatus || isUpdatingStatus}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded-md transition-colors
+                        ${isCurrentStatus 
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                          : 'hover:bg-gray-50 text-gray-700 cursor-pointer'
+                        }
+                        ${isUpdatingStatus ? 'opacity-50' : ''}
+                      `}
+                    >
+                      <StatusIcon className="h-3 w-3" />
+                      {status.label}
+                      {isCurrentStatus && <span className="ml-auto text-xs">Current</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <div className="border-t border-gray-100 my-1"></div>
               <DropdownMenuItem 
-                className="text-red-600" 
                 onClick={handleDeleteClick}
-                disabled={isDeleting}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
               >
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Project
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

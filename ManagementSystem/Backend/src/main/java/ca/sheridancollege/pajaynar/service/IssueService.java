@@ -13,7 +13,7 @@ public interface IssueService {
 	
 	List<Issue> getIssueByProjectId(Long projectId);
 	
-	Issue createIssue ( IssueRequest issueRequest, Users user) throws Exception;
+	Issue createIssue ( Long issueId, IssueRequest issueRequest, Users user) throws Exception;
 	
 	void deleteIssue ( Long issueId, Users user) throws Exception;
 	

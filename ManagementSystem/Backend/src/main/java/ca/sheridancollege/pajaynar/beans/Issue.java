@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.CascadeType;
@@ -15,9 +16,11 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.SequenceGenerator;
 import lombok.Data;
+import lombok.ToString;
 
 @Entity
 @Data
+@ToString(exclude = {"project", "comments", "assignee"})
 public class Issue {
 
 	@Id
@@ -37,6 +40,7 @@ public class Issue {
 	private Users assignee;
 	
 	@ManyToOne
+	@JsonBackReference
 	private Project project;
 	
 	@JsonIgnore

@@ -1,4 +1,4 @@
-package ca.sheridancollege.pajaynar.beans;
+	package ca.sheridancollege.pajaynar.beans;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,9 +14,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.SequenceGenerator;
 import lombok.Data;
+import lombok.ToString;
 
 @Entity
 @Data
+@ToString(exclude = "assignedIssues")
 public class Users {
 
 	@Id

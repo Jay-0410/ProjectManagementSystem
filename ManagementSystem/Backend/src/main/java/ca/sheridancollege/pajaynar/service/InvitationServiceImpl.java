@@ -51,7 +51,7 @@ public class InvitationServiceImpl implements InvitationService {
 		
 		invitationRepo.save(invitation);
 		
-		String invitationLink = "http://localhost:8080/accept_invitaion?token=" + token;
+		String invitationLink = "http://localhost:8080/api/project/accept_invitation?invitationToken=" + token;
 		
 		emailService.sendEmailWithToken(email, invitationLink);
 		}
@@ -69,7 +69,7 @@ public class InvitationServiceImpl implements InvitationService {
 		if ( invitation == null) {
 			throw new Exception ( "Invalid token");
 		}
-		
+		System.out.println("Invitation: " + invitation.getEmail() + " Project ID: " + invitation.getProjectId());
 		projectService.addUserToProject(invitation.getProjectId(), userId);
 		
 		return invitation;

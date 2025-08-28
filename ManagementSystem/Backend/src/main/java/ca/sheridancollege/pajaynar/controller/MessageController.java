@@ -38,7 +38,7 @@ public class MessageController {
 			
 			) throws Exception {
 		
-		Message sentMessage = messageService.sendMessage(request.getSenderId(), request.getProjectId(), request.getContent());
+		Message sentMessage = messageService.sendMessage(request.getToken(), request.getProjectId(), request.getContent());
 		
 		return new ResponseEntity<Message> (sentMessage, HttpStatus.OK);
 	}
@@ -51,7 +51,7 @@ public class MessageController {
 			) throws Exception {
 		
 		List<Message> messages = messageService.getMessagesByProjetId(projectId);
-		
+		System.out.println("Sender: " + messages.get(messages.size() - 1).getSender().getUsername());
 		return new ResponseEntity<List<Message>> (messages, HttpStatus.OK);
 	}
 }

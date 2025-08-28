@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.ElementCollection;
@@ -38,6 +39,7 @@ public class Project {
 	private String name;
 	private String description;
 	private String category;
+	private String status = "ACTIVE"; // Default status
 	
 	@ElementCollection
 	private List<String> tags = new ArrayList<>();
@@ -51,6 +53,7 @@ public class Project {
 	private Users owner;
 
 	@OneToMany(mappedBy = "project" , cascade = CascadeType.ALL, orphanRemoval = true)
+	@JsonManagedReference
 	private List<Issue> issues = new ArrayList<>();
 	
 	@ManyToMany
