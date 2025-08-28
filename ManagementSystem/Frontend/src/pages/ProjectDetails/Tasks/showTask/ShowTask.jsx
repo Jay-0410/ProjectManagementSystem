@@ -209,7 +209,7 @@ const ShowTask = () => {
     
     // Update the task state with the new data
     setTask(updatedTask);
-    toast.success('Task updated successfully');
+    // Toast message is already shown by CreateTaskForm, no need to duplicate
   };
 
   const handleGoBack = () => {

@@ -36,16 +36,35 @@ import {
   MessageSquare
 } from 'lucide-react'
 
-// Form validation schema
+// Form validation schema with enhanced constraints
 const projectSchema = z.object({
-  projectName: z.string().min(1, 'Project name is required').min(3, 'Project name must be at least 3 characters'),
-  description: z.string().min(1, 'Description is required').min(10, 'Description must be at least 10 characters'),
-  category: z.string().min(1, 'Category is required'),
+  projectName: z.string()
+    .min(1, 'Project name is required')
+    .min(3, 'Project name must be at least 3 characters')
+    .max(100, 'Project name must be less than 100 characters')
+    .refine((value) => value.trim().length > 0, {
+      message: 'Project name cannot be empty or contain only spaces',
+    })
+    .refine((value) => /^[a-zA-Z0-9\s\-_\.]+$/.test(value), {
+      message: 'Project name can only contain letters, numbers, spaces, hyphens, underscores, and dots',
+    }),
+  description: z.string()
+    .min(1, 'Description is required')
+    .min(10, 'Description must be at least 10 characters')
+    .max(500, 'Description must be less than 500 characters')
+    .refine((value) => value.trim().length >= 10, {
+      message: 'Description must contain at least 10 meaningful characters',
+    }),
+  category: z.string()
+    .min(1, 'Please select a category for your project'),
   tags: z.array(z.string())
-    .min(1, 'At least one tag is required')
-    .max(10, 'Maximum 10 tags allowed')
+    .min(1, 'Please select at least one technology/tag')
+    .max(10, 'Maximum 10 technologies allowed')
     .refine((tags) => new Set(tags).size === tags.length, {
-      message: 'Duplicate tags are not allowed',
+      message: 'Duplicate technologies are not allowed',
+    })
+    .refine((tags) => tags.every(tag => tag.trim().length > 0), {
+      message: 'All selected technologies must be valid',
     }),
 });
 
@@ -123,6 +142,46 @@ const CreateProjectForm = ({ projectToEdit = null, onProjectUpdated = null }) =>
             console.log('⚠️ Form is already submitting, ignoring duplicate submission');
             return;
         }
+
+        // Enhanced validation before submission
+        const validationResult = projectSchema.safeParse(data);
+        if (!validationResult.success) {
+            console.error('❌ Form validation failed:', validationResult.error.errors);
+            
+            // Show specific validation errors
+            const errors = validationResult.error.errors;
+            const errorMessages = errors.map(error => `${error.path.join('.')}: ${error.message}`);
+            setSubmitError(`Please fix the following errors:\n${errorMessages.join('\n')}`);
+            
+            // Show toast for immediate feedback
+            toast.error('Please fill in all required fields correctly');
+            return;
+        }
+
+        // Additional constraint checks
+        if (!data.projectName || data.projectName.trim().length === 0) {
+            setSubmitError('Project name is required and cannot be empty');
+            toast.error('Project name is required');
+            return;
+        }
+
+        if (!data.description || data.description.trim().length < 10) {
+            setSubmitError('Description must be at least 10 characters long');
+            toast.error('Please provide a meaningful description');
+            return;
+        }
+
+        if (!data.category) {
+            setSubmitError('Please select a project category');
+            toast.error('Project category is required');
+            return;
+        }
+
+        if (!data.tags || data.tags.length === 0) {
+            setSubmitError('Please select at least one technology/tag');
+            toast.error('At least one technology must be selected');
+            return;
+        }
         
         try {
             setIsSubmitting(true);
@@ -133,15 +192,16 @@ const CreateProjectForm = ({ projectToEdit = null, onProjectUpdated = null }) =>
             if (!shouldUseMockData() && !isAuthenticated()) {
                 setSubmitError('Authentication required. Please log in first.');
                 console.warn('🔒 Authentication required for server requests');
+                toast.error('Please log in to create projects');
                 return;
             }
 
             // Transform form data to match API expected format
             const projectData = {
-                name: data.projectName,  // Backend expects 'name', not 'title'
-                description: data.description,
+                name: data.projectName.trim(),  // Backend expects 'name', not 'title'
+                description: data.description.trim(),
                 category: data.category,
-                tags: data.tags,  // This is correct - backend expects array of strings
+                tags: data.tags.filter(tag => tag.trim().length > 0),  // Remove empty tags
                 startDate: data.startDate,
                 endDate: data.endDate,
                 status: isEditMode ? (projectToEdit.status || 'ACTIVE') : 'ACTIVE', // Preserve existing status or default
@@ -202,10 +262,13 @@ const CreateProjectForm = ({ projectToEdit = null, onProjectUpdated = null }) =>
             if (error.message.includes('401') || error.message.includes('Unauthorized')) {
                 setSubmitError('Authentication failed. Please log in again.');
                 console.warn('🔒 Authentication error - token may be expired');
+                toast.error('Authentication failed. Please log in again.');
             } else if (error.message.includes('403') || error.message.includes('Forbidden')) {
                 setSubmitError(`You do not have permission to ${isEditMode ? 'update' : 'create'} projects.`);
+                toast.error(`You do not have permission to ${isEditMode ? 'update' : 'create'} projects.`);
             } else {
                 setSubmitError(error.message || `Failed to ${isEditMode ? 'update' : 'create'} project. Please try again.`);
+                toast.error(error.message || `Failed to ${isEditMode ? 'update' : 'create'} project. Please try again.`);
             }
         } finally {
             setIsSubmitting(false);
@@ -220,7 +283,7 @@ const CreateProjectForm = ({ projectToEdit = null, onProjectUpdated = null }) =>
       {/* Scrollable Content Container */}
       <div className="relative z-10 overflow-y-auto max-h-[calc(90vh-80px)]">
         <div className="p-3 sm:p-4 md:p-6 space-y-4">
-          {/* Header Section */}
+          {/* Header Section with Form Completion Progress */}
           <div className="text-center space-y-3 bg-white/90 backdrop-blur-sm rounded-xl p-4 border border-gray-100 shadow-sm">
             <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200/50">
               <Sparkles className="h-4 w-4 text-blue-600" />
@@ -228,6 +291,53 @@ const CreateProjectForm = ({ projectToEdit = null, onProjectUpdated = null }) =>
                 {isEditMode ? 'Update Your Project Details' : 'Bring Your Ideas to Life'}
               </span>
             </div>
+
+            {/* Form Completion Progress */}
+            {!isEditMode && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-600">Form Completion</span>
+                  <span className="font-medium text-gray-800">
+                    {(() => {
+                      let completed = 0;
+                      if (form.watch('projectName')?.trim()) completed++;
+                      if (form.watch('description')?.trim() && form.watch('description').trim().length >= 10) completed++;
+                      if (form.watch('category')) completed++;
+                      if (form.watch('tags')?.length > 0) completed++;
+                      return `${completed}/4`;
+                    })()}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-300 ease-out"
+                    style={{ 
+                      width: `${(() => {
+                        let completed = 0;
+                        if (form.watch('projectName')?.trim()) completed++;
+                        if (form.watch('description')?.trim() && form.watch('description').trim().length >= 10) completed++;
+                        if (form.watch('category')) completed++;
+                        if (form.watch('tags')?.length > 0) completed++;
+                        return (completed / 4) * 100;
+                      })()}%` 
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Required fields</span>
+                  <span>
+                    {(() => {
+                      let completed = 0;
+                      if (form.watch('projectName')?.trim()) completed++;
+                      if (form.watch('description')?.trim() && form.watch('description').trim().length >= 10) completed++;
+                      if (form.watch('category')) completed++;
+                      if (form.watch('tags')?.length > 0) completed++;
+                      return completed === 4 ? 'Ready to create!' : `${4 - completed} fields remaining`;
+                    })()}
+                  </span>
+                </div>
+              </div>
+            )}
           
             {/* Progress Steps */}
             <div className="flex items-center justify-center space-x-2 sm:space-x-4 overflow-x-auto pb-2">
@@ -277,14 +387,64 @@ const CreateProjectForm = ({ projectToEdit = null, onProjectUpdated = null }) =>
           <div className="space-y-4">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {/* Error Message */}
-                {}
+                {/* Enhanced Error Message with Field Validation Summary */}
                 {submitError && (
-                  <div className="p-3 rounded-xl bg-gradient-to-r from-red-50 to-pink-50 border border-red-200/50 backdrop-blur-sm animate-in slide-in-from-top duration-300">
-                    <div className="flex items-start space-x-2">
-                      <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-red-50 to-pink-50 border border-red-200/50 backdrop-blur-sm animate-in slide-in-from-top duration-300">
+                    <div className="flex items-start space-x-3">
+                      <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 space-y-3">
                         <p className="text-sm font-medium text-red-800">{submitError}</p>
+                        
+                        {/* Validation Checklist */}
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-red-700">Required fields checklist:</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            <div className={`flex items-center space-x-2 ${
+                              form.watch('projectName')?.trim() ? 'text-green-700' : 'text-red-700'
+                            }`}>
+                              {form.watch('projectName')?.trim() ? (
+                                <CheckCircle className="h-3 w-3" />
+                              ) : (
+                                <AlertCircle className="h-3 w-3" />
+                              )}
+                              <span>Project Name {form.watch('projectName')?.trim() ? '✓' : '(Required)'}</span>
+                            </div>
+                            
+                            <div className={`flex items-center space-x-2 ${
+                              form.watch('description')?.trim() && form.watch('description').trim().length >= 10 ? 'text-green-700' : 'text-red-700'
+                            }`}>
+                              {form.watch('description')?.trim() && form.watch('description').trim().length >= 10 ? (
+                                <CheckCircle className="h-3 w-3" />
+                              ) : (
+                                <AlertCircle className="h-3 w-3" />
+                              )}
+                              <span>Description {form.watch('description')?.trim() && form.watch('description').trim().length >= 10 ? '✓' : '(10+ chars)'}</span>
+                            </div>
+                            
+                            <div className={`flex items-center space-x-2 ${
+                              form.watch('category') ? 'text-green-700' : 'text-red-700'
+                            }`}>
+                              {form.watch('category') ? (
+                                <CheckCircle className="h-3 w-3" />
+                              ) : (
+                                <AlertCircle className="h-3 w-3" />
+                              )}
+                              <span>Category {form.watch('category') ? '✓' : '(Required)'}</span>
+                            </div>
+                            
+                            <div className={`flex items-center space-x-2 ${
+                              form.watch('tags')?.length > 0 ? 'text-green-700' : 'text-red-700'
+                            }`}>
+                              {form.watch('tags')?.length > 0 ? (
+                                <CheckCircle className="h-3 w-3" />
+                              ) : (
+                                <AlertCircle className="h-3 w-3" />
+                              )}
+                              <span>Technologies {form.watch('tags')?.length > 0 ? '✓' : '(1+ required)'}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
                         {submitError.includes('Authentication') && (
                           <Button
                             type="button"
@@ -352,9 +512,22 @@ const CreateProjectForm = ({ projectToEdit = null, onProjectUpdated = null }) =>
                           name="projectName"
                           render={({ field }) => (
                             <FormItem className="space-y-2">
-                              <FormLabel className="flex items-center space-x-2 text-sm font-medium text-gray-700">
-                                <Type className="h-4 w-4" />
-                                <span>Project Name</span>
+                              <FormLabel className="flex items-center justify-between text-sm font-medium text-gray-700">
+                                <div className="flex items-center space-x-2">
+                                  <Type className="h-4 w-4" />
+                                  <span>Project Name</span>
+                                  <span className="text-red-500">*</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  {field.value?.trim() && field.value.trim().length >= 3 ? (
+                                    <CheckCircle className="h-3 w-3 text-green-500" />
+                                  ) : field.value?.trim() ? (
+                                    <AlertCircle className="h-3 w-3 text-orange-500" />
+                                  ) : null}
+                                  <span className="text-xs text-gray-500">
+                                    {field.value?.length || 0}/100
+                                  </span>
+                                </div>
                               </FormLabel>
                               <FormControl>
                                 <div className="relative">
@@ -406,9 +579,22 @@ const CreateProjectForm = ({ projectToEdit = null, onProjectUpdated = null }) =>
                           name="description"
                           render={({ field }) => (
                             <FormItem className="space-y-2">
-                              <FormLabel className="flex items-center space-x-2 text-sm font-medium text-gray-700">
-                                <MessageSquare className="h-4 w-4" />
-                                <span>Description</span>
+                              <FormLabel className="flex items-center justify-between text-sm font-medium text-gray-700">
+                                <div className="flex items-center space-x-2">
+                                  <MessageSquare className="h-4 w-4" />
+                                  <span>Description</span>
+                                  <span className="text-red-500">*</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  {field.value?.trim() && field.value.trim().length >= 10 ? (
+                                    <CheckCircle className="h-3 w-3 text-green-500" />
+                                  ) : field.value?.trim() ? (
+                                    <AlertCircle className="h-3 w-3 text-orange-500" />
+                                  ) : null}
+                                  <span className="text-xs text-gray-500">
+                                    {field.value?.length || 0}/500
+                                  </span>
+                                </div>
                               </FormLabel>
                               <FormControl>
                                 <div className="relative">
@@ -423,8 +609,13 @@ const CreateProjectForm = ({ projectToEdit = null, onProjectUpdated = null }) =>
                                         : 'border-gray-200 hover:border-gray-300'
                                     }`}
                                   />
-                                  <div className="absolute bottom-2 right-2 text-xs text-gray-400">
-                                    {field.value?.length || 0}/500
+                                  <div className="absolute bottom-2 right-2 flex items-center space-x-2">
+                                    <div className="text-xs text-gray-400">
+                                      {field.value?.length || 0}/500
+                                    </div>
+                                    {field.value?.trim() && field.value.trim().length >= 10 && (
+                                      <CheckCircle className="h-3 w-3 text-green-500" />
+                                    )}
                                   </div>
                                 </div>
                               </FormControl>
@@ -461,9 +652,15 @@ const CreateProjectForm = ({ projectToEdit = null, onProjectUpdated = null }) =>
                           name="category"
                           render={({ field }) => (
                             <FormItem className="space-y-2">
-                              <FormLabel className="flex items-center space-x-2 text-sm font-medium text-gray-700">
-                                <Folder className="h-4 w-4" />
-                                <span>Project Category</span>
+                              <FormLabel className="flex items-center justify-between text-sm font-medium text-gray-700">
+                                <div className="flex items-center space-x-2">
+                                  <Folder className="h-4 w-4" />
+                                  <span>Project Category</span>
+                                  <span className="text-red-500">*</span>
+                                </div>
+                                {field.value && (
+                                  <CheckCircle className="h-3 w-3 text-green-500" />
+                                )}
                               </FormLabel>
                               <FormControl>
                                 <Select
@@ -505,12 +702,22 @@ const CreateProjectForm = ({ projectToEdit = null, onProjectUpdated = null }) =>
                           name="tags"
                           render={({ field }) => (
                             <FormItem className="space-y-3">
-                              <FormLabel className="flex items-center space-x-2 text-sm font-medium text-gray-700">
-                                <Hash className="h-4 w-4" />
-                                <span>Technologies</span>
-                                <Badge variant="outline" className="ml-2 text-xs bg-purple-50 text-purple-700 border-purple-200">
-                                  {field.value?.length || 0} selected
-                                </Badge>
+                              <FormLabel className="flex items-center justify-between text-sm font-medium text-gray-700">
+                                <div className="flex items-center space-x-2">
+                                  <Hash className="h-4 w-4" />
+                                  <span>Technologies</span>
+                                  <span className="text-red-500">*</span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  {field.value?.length > 0 && (
+                                    <CheckCircle className="h-3 w-3 text-green-500" />
+                                  )}
+                                  <Badge variant="outline" className={`text-xs ${
+                                    field.value?.length > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-700 border-gray-200'
+                                  }`}>
+                                    {field.value?.length || 0} selected
+                                  </Badge>
+                                </div>
                               </FormLabel>
                               
                               {/* Quick Selection Buttons - Compact Grid */}
@@ -714,8 +921,60 @@ const CreateProjectForm = ({ projectToEdit = null, onProjectUpdated = null }) =>
                           
                           <Button 
                             type="submit" 
-                            className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] rounded-lg px-6 h-9" 
-                            disabled={isSubmitting}
+                            className={`font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] rounded-lg px-6 h-9 ${
+                              // Check if all required fields are filled
+                              form.watch('projectName')?.trim() && 
+                              form.watch('description')?.trim() && 
+                              form.watch('category') && 
+                              form.watch('tags')?.length > 0
+                                ? 'bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white' 
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed hover:scale-100'
+                            }`}
+                            disabled={
+                              isSubmitting || 
+                              !form.watch('projectName')?.trim() || 
+                              !form.watch('description')?.trim() || 
+                              !form.watch('category') || 
+                              !form.watch('tags')?.length
+                            }
+                            onClick={(e) => {
+                              // Additional check before submission
+                              const projectName = form.watch('projectName')?.trim();
+                              const description = form.watch('description')?.trim();
+                              const category = form.watch('category');
+                              const tags = form.watch('tags');
+
+                              if (!projectName) {
+                                e.preventDefault();
+                                toast.error('Project name is required');
+                                setSubmitError('Please enter a project name');
+                                return;
+                              }
+
+                              if (!description || description.length < 10) {
+                                e.preventDefault();
+                                toast.error('Description must be at least 10 characters');
+                                setSubmitError('Please provide a meaningful description (at least 10 characters)');
+                                return;
+                              }
+
+                              if (!category) {
+                                e.preventDefault();
+                                toast.error('Please select a project category');
+                                setSubmitError('Project category is required');
+                                return;
+                              }
+
+                              if (!tags || tags.length === 0) {
+                                e.preventDefault();
+                                toast.error('Please select at least one technology');
+                                setSubmitError('At least one technology must be selected');
+                                return;
+                              }
+
+                              // Clear any previous errors if all validations pass
+                              setSubmitError('');
+                            }}
                           >
                             {isSubmitting ? (
                               <div className="flex items-center space-x-2">
@@ -726,6 +985,13 @@ const CreateProjectForm = ({ projectToEdit = null, onProjectUpdated = null }) =>
                               <div className="flex items-center space-x-2">
                                 <Rocket className="h-4 w-4" />
                                 <span>{submitButtonText}</span>
+                                {/* Show validation status */}
+                                {!(form.watch('projectName')?.trim() && 
+                                  form.watch('description')?.trim() && 
+                                  form.watch('category') && 
+                                  form.watch('tags')?.length > 0) && (
+                                  <AlertCircle className="h-4 w-4 ml-1" />
+                                )}
                               </div>
                             )}
                           </Button>

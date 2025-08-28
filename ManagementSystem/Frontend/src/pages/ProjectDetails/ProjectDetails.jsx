@@ -159,12 +159,6 @@ const ProjectDetails = () => {
                   <DropdownMenuItem onClick={handleEditProject}>
                     Edit Project
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    Share Project
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    Export Data
-                  </DropdownMenuItem>
                   <DropdownMenuItem 
                     className="text-red-600"
                     onClick={handleDeleteProject}

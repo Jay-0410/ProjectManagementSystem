@@ -50,7 +50,8 @@ const ProjectCard = ({
     status: "ACTIVE"
   },
   onDelete,
-  onStatusUpdate, // New prop for status updates
+  onStatusUpdate, // Callback for status updates
+  onProjectUpdate, // Callback for project updates
   viewMode = 'grid'
 }) => {
   const navigate = useNavigate();
@@ -151,13 +152,17 @@ const ProjectCard = ({
     setIsEditDialogOpen(true);
   };
 
-  const handleProjectUpdated = () => {
-    console.log('✅ Project updated successfully');
+  const handleProjectUpdated = (updatedProject) => {
+    console.log('✅ Project updated successfully:', updatedProject);
     setIsEditDialogOpen(false);
-    // Optionally trigger a refresh of the project list
-    if (onFilterByCategory || onSearch) {
-      // This could trigger a parent component refresh
-      window.location.reload(); // Simple refresh for now
+    
+    // Notify parent component about the update
+    if (onProjectUpdate) {
+      onProjectUpdate(updatedProject);
+    } else {
+      // Fallback to page reload if no callback provided
+      console.warn('No onProjectUpdate callback provided, falling back to page reload');
+      window.location.reload();
     }
   };
 

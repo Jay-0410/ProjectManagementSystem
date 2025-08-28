@@ -258,6 +258,34 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
     }
   };
 
+  // Handle project update (when project details are modified)
+  const handleProjectUpdate = async (updatedProject) => {
+    try {
+      console.log('🔄 Updating project in UI:', updatedProject);
+      
+      // Update the project in both arrays
+      const updateProject = (projectList) => 
+        projectList.map(project => {
+          const id = project.id || project.projectId;
+          const updatedId = updatedProject.id || updatedProject.projectId;
+          if (id === updatedId) {
+            return { ...project, ...updatedProject };
+          }
+          return project;
+        });
+
+      setProjects(updateProject(projects));
+      setFilteredProjects(updateProject(filteredProjects));
+
+      console.log('✅ Project updated successfully in UI');
+      toast.success('Project updated successfully');
+      
+    } catch (error) {
+      console.error('❌ Error updating project in UI:', error);
+      toast.error('Failed to update project: ' + error.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -512,6 +540,7 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
                 project={project}
                 onDelete={handleDeleteProject}
                 onStatusUpdate={handleStatusUpdate}
+                onProjectUpdate={handleProjectUpdate}
                 viewMode={viewMode}
               />
             </div>

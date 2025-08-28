@@ -141,16 +141,23 @@ const TaskGroup = ({ type, tasks, project, onTaskUpdate }) => {
 
   // Handle task updated
   const handleTaskUpdated = (updatedTask) => {
-    console.log('✅ Task updated successfully:', updatedTask);
+    console.log('✅ Task updated successfully in TaskGroup:', updatedTask);
+    console.log('📝 Updated task details:', {
+      id: updatedTask?.id,
+      title: updatedTask?.title,
+      status: updatedTask?.status,
+      description: updatedTask?.description
+    });
     setIsEditDialogOpen(false);
     setEditingTask(null);
     
-    // Notify parent component to refresh
+    // Notify parent component to refresh with updated task data
     if (onTaskUpdate) {
-      onTaskUpdate();
+      console.log('📞 Calling onTaskUpdate with updated task data');
+      onTaskUpdate(updatedTask);
     }
     
-    toast.success('Task updated successfully');
+    // Toast message is already shown by CreateTaskForm, no need to duplicate
   };
 
   if (!tasks || tasks.length === 0) {

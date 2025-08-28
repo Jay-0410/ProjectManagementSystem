@@ -83,9 +83,23 @@ const Tasks = ({ project }) => {
   };
 
   // Handle task updates (status changes, deletions, etc.)
-  const handleTaskUpdate = () => {
-    console.log('🔄 Task updated, refreshing task list...');
-    setRefreshTrigger(prev => prev + 1); // Trigger a refresh to reload tasks
+  const handleTaskUpdate = (updatedTask = null) => {
+    if (updatedTask) {
+      console.log('🔄 Task updated with data, updating local state:', updatedTask);
+      console.log('📝 Current tasks before update:', tasks.map(t => ({id: t.id, title: t.title, status: t.status})));
+      
+      // Update the specific task in the local state for immediate UI update
+      setTasks(prevTasks => {
+        const newTasks = prevTasks.map(task => 
+          task.id === updatedTask.id ? updatedTask : task
+        );
+        console.log('📝 New tasks after update:', newTasks.map(t => ({id: t.id, title: t.title, status: t.status})));
+        return newTasks;
+      });
+    } else {
+      console.log('🔄 Task updated, refreshing task list...');
+      setRefreshTrigger(prev => prev + 1); // Trigger a refresh to reload tasks
+    }
   };
 
   // Use fetched tasks or fallback to project.issues
