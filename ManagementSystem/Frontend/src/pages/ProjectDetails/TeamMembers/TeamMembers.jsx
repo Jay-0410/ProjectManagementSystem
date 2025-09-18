@@ -145,15 +145,6 @@ const TeamMembers = ({ project }) => {
                             </div>
                           </div>
                         </div>
-                        
-                        <div className="flex gap-2 pt-2">
-                          <Button variant="outline" size="sm" className="flex-1">
-                            Message
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1">
-                            View Profile
-                          </Button>
-                        </div>
                       </div>
                     </AccordionContent>
                   </AccordionItem>

@@ -9,15 +9,15 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import CreateProjectForm from "./NewProject/CreateProjectForm";
+import TokenAcceptanceForm from "../../components/TokenAcceptanceForm/TokenAcceptanceForm";
 import {
   User,
   Plus,
-  Settings,
   LogOut,
-  UserCircle,
   Sparkles,
   Menu,
   X,
+  UserPlus,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -85,6 +85,30 @@ const Navbar = () => {
                   </div>
                 </DialogContent>
               </Dialog>
+
+              {/* Token Acceptance Button */}
+              <TokenAcceptanceForm 
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 px-4 text-gray-700 hover:text-green-600 hover:bg-green-50 transition-all duration-200 font-medium group"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
+                    Join Project
+                  </Button>
+                }
+                onSuccess={(invitation) => {
+                  // Navigate to the project after successful acceptance
+                  if (invitation && invitation.project) {
+                    navigate(`/project/${invitation.project.id}`);
+                  } else if (invitation && invitation.projectId) {
+                    navigate(`/project/${invitation.projectId}`);
+                  } else {
+                    navigate('/');
+                  }
+                }}
+              />
             </div>
           </div>
 
@@ -128,17 +152,6 @@ const Navbar = () => {
                       </div>
                     </div>
                   </div>
-
-                  <DropdownMenuItem className="cursor-pointer hover:bg-blue-50 focus:bg-blue-50 transition-colors duration-200">
-                    <UserCircle className="h-4 w-4 mr-2 text-gray-500" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer hover:bg-blue-50 focus:bg-blue-50 transition-colors duration-200">
-                    <Settings className="h-4 w-4 mr-2 text-gray-500" />
-                    Settings
-                  </DropdownMenuItem>
-
-                  <DropdownMenuSeparator />
 
                   <DropdownMenuItem
                     className="cursor-pointer hover:bg-red-50 focus:bg-red-50 text-red-600 transition-colors duration-200"
@@ -207,6 +220,31 @@ const Navbar = () => {
                   </div>
                 </DialogContent>
               </Dialog>
+
+              {/* Mobile Token Acceptance */}
+              <TokenAcceptanceForm 
+                trigger={
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start h-10 text-gray-700 hover:text-green-600 hover:bg-green-50"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Join Project
+                  </Button>
+                }
+                onSuccess={(invitation) => {
+                  setIsOpen(false);
+                  // Navigate to the project after successful acceptance
+                  if (invitation && invitation.project) {
+                    navigate(`/project/${invitation.project.id}`);
+                  } else if (invitation && invitation.projectId) {
+                    navigate(`/project/${invitation.projectId}`);
+                  } else {
+                    navigate('/');
+                  }
+                }}
+              />
             </div>
           </div>
         )}
