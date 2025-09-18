@@ -10,5 +10,4 @@ public interface UserService {
 	
 	Users findUserById( Long id) throws Exception;
 	
-	Users updateUsersProjectSize ( Users user, int number); 
 }

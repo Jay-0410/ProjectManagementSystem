@@ -46,7 +46,6 @@ const Tasks = ({ project }) => {
   useEffect(() => {
     const fetchTasks = async () => {
       if (!project.id && !project.projectId) {
-        console.warn('No project ID available to fetch tasks');
         setLoading(false);
         return;
       }
@@ -55,14 +54,11 @@ const Tasks = ({ project }) => {
         setLoading(true);
         setError(null);
         const projectId = project.id || project.projectId;
-        console.log('🔄 Fetching tasks for project:', projectId);
         
         const fetchedTasks = await issueService.getIssuesByProject(projectId);
-        console.log('✅ Tasks fetched successfully:', fetchedTasks);
         
         setTasks(fetchedTasks || []);
       } catch (err) {
-        console.error('❌ Error fetching tasks:', err);
         setError(err.message);
         toast.error('Failed to load tasks: ' + err.message);
         setTasks([]); // Fallback to empty array
@@ -76,28 +72,25 @@ const Tasks = ({ project }) => {
 
   // Handle task creation success
   const handleTaskCreated = (newTask) => {
-    console.log('✅ New task created:', newTask);
     setDialogOpen(false); // Close the dialog
     setRefreshTrigger(prev => prev + 1); // Trigger a refresh to reload tasks
     // Toast message is already shown in CreateTaskForm, no need to duplicate
   };
 
   // Handle task updates (status changes, deletions, etc.)
-  const handleTaskUpdate = (updatedTask = null) => {
-    if (updatedTask) {
-      console.log('🔄 Task updated with data, updating local state:', updatedTask);
-      console.log('📝 Current tasks before update:', tasks.map(t => ({id: t.id, title: t.title, status: t.status})));
-      
+  const handleTaskUpdate = (updatedTask = null, deletedTaskId = null) => {
+    if (deletedTaskId) {
+      // Remove the deleted task from local state immediately
+      setTasks(prevTasks => prevTasks.filter(task => task.id !== deletedTaskId));
+    } else if (updatedTask) {
       // Update the specific task in the local state for immediate UI update
       setTasks(prevTasks => {
         const newTasks = prevTasks.map(task => 
           task.id === updatedTask.id ? updatedTask : task
         );
-        console.log('📝 New tasks after update:', newTasks.map(t => ({id: t.id, title: t.title, status: t.status})));
         return newTasks;
       });
     } else {
-      console.log('🔄 Task updated, refreshing task list...');
       setRefreshTrigger(prev => prev + 1); // Trigger a refresh to reload tasks
     }
   };

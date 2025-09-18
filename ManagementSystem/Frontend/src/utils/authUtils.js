@@ -24,14 +24,6 @@ export const authUtils = {
     return getAuthToken();
   },
 
-  // For development/testing: Set a mock token
-  setMockToken: () => {
-    const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-    setAuthToken(mockToken);
-    console.log('🧪 Mock token set for testing');
-    return mockToken;
-  },
-
   // Clear all auth data
   clearAuth: () => {
     localStorage.removeItem('authToken');

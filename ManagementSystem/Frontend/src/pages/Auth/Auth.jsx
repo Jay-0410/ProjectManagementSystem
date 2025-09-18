@@ -36,10 +36,6 @@ const Auth = () => {
     mode: 'onChange',
   });
 
-  // Debug: Watch the form values
-  const watchedValues = signupForm.watch();
-  console.log('Signup form values:', watchedValues);
-
   const validatePassword = (password) => {
     if (password.length < 6) {
       return 'Password must be at least 6 characters long';
@@ -63,14 +59,12 @@ const Auth = () => {
         username: data.username,
         password: data.password,
       });
-      console.log('Login response:', response);
+      
       if (response.ok) {
         const authResponse = await response.json();
         
         // Use the auth context login method
         login(authResponse.token, data.username);
-        
-        console.log('Login successful:', authResponse.message);
         
         // Redirect to home page
         navigate('/');
@@ -79,7 +73,6 @@ const Auth = () => {
         setError(errorData.message || 'Login failed. Please check your credentials.');
       }
     } catch (err) {
-      console.error('Login error:', err);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -87,7 +80,6 @@ const Auth = () => {
   };
 
   const handleSignup = async (data) => {
-    console.log('🚀 handleSignup called with data:', data);
     setLoading(true);
     setError('');
 
@@ -99,20 +91,17 @@ const Auth = () => {
     }
 
     try {
-        console.log('Signing up with data:', data);
       const response = await api.signup({
         fullName: data.fullName,
         username: data.username,
         password: data.password,
       });
-        console.log('Signup response:', response);
+      
       if (response.ok) {
         const authResponse = await response.json();
         
         // Use the auth context login method
         login(authResponse.token, data.username);
-        
-        console.log('Signup successful:', authResponse.message);
         
         // Redirect to home page
         navigate('/');
@@ -121,7 +110,6 @@ const Auth = () => {
         setError(errorData.message || 'Registration failed. Please try again.');
       }
     } catch (err) {
-      console.error('Signup error:', err);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);

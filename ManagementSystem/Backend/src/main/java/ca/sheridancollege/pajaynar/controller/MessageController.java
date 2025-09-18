@@ -51,7 +51,6 @@ public class MessageController {
 			) throws Exception {
 		
 		List<Message> messages = messageService.getMessagesByProjetId(projectId);
-		System.out.println("Sender: " + messages.get(messages.size() - 1).getSender().getUsername());
 		return new ResponseEntity<List<Message>> (messages, HttpStatus.OK);
 	}
 }

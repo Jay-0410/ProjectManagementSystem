@@ -32,7 +32,6 @@ public class Chat {
 	@SequenceGenerator(name = "chat_seq", sequenceName = "chat_seq", allocationSize = 1, initialValue = 1)
 	private Long id;
 
-	private String name;
 	
 	@JsonIgnore
 	@OneToMany(mappedBy = "chat", cascade = CascadeType.ALL, orphanRemoval = true)

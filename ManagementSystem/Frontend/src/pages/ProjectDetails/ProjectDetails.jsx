@@ -15,7 +15,6 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import projectService from "../../services/projectService";
-import { shouldUseMockData } from "../../config/dataSource";
 import { toast } from 'sonner';
 import CreateProjectForm from "../Navbar/NewProject/CreateProjectForm";
 
@@ -41,11 +40,11 @@ const ProjectDetails = () => {
       setLoading(true);
       setError(null);
       
-      // This will automatically use mock data or server data based on configuration
+      // This will automatically use server data
       const projectData = await projectService.getProjectById(projectId);
       if (projectData) {
         setProject(projectData);
-        console.log(`📊 Project loaded from: ${shouldUseMockData() ? 'Mock Data' : 'Server API'}`);
+        console.log('📊 Project loaded from server API');
       } else {
         setError('Project not found');
       }
@@ -140,9 +139,6 @@ const ProjectDetails = () => {
                 </span>
                 <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
                   {project.status?.toLowerCase().replace('_', ' ') || 'active'}
-                </span>
-                <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
-                  {project.completionPercentage || 0}% Complete
                 </span>
               </div>
             </div>

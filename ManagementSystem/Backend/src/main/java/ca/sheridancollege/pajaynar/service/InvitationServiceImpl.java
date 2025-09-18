@@ -50,10 +50,8 @@ public class InvitationServiceImpl implements InvitationService {
 		invitation.setToken(token);
 		
 		invitationRepo.save(invitation);
-		
-		String invitationLink = "http://localhost:8080/api/project/accept_invitation?invitationToken=" + token;
-		
-		emailService.sendEmailWithToken(email, invitationLink);
+			
+		emailService.sendEmailWithToken(email, token);
 		}
 		
         else {

@@ -4,7 +4,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import projectService from '../../../services/projectService';
-import { shouldUseMockData } from '../../../config/dataSource';
 import { calculateProjectStats } from '../../../utils/projectStats';
 import { toast } from 'sonner';
 import { TrendingUp, Activity, CheckCircle, Clock, Search, Filter, AlertTriangle, Calendar } from 'lucide-react';
@@ -30,7 +29,6 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
     if (projects.length > 0) {
       const calculatedStats = calculateProjectStats(projects);
       setStats(calculatedStats);
-      console.log('📊 Calculated project stats:', calculatedStats);
     } else {
       // Reset stats when no projects
       setStats({
@@ -47,31 +45,13 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
 
   const loadProjects = async () => {
     try {
-
       setLoading(true);
       
-      // This will automatically use mock data or server data based on configuration
+      // Load projects from server API
       const projectsData = await projectService.getAllProjects();
       setProjects(projectsData);
-      
-      console.log(`📊 Data loaded from: ${shouldUseMockData() ? 'Mock Data' : 'Server API'}`);
     } catch (error) {
-      console.error('Error loading projects:', error);
-      
-      // Enhanced error handling
-      if (!shouldUseMockData()) {
-        console.warn('🔄 Server request failed, falling back to mock data...');
-        try {
-          // Fallback to mock data if server fails
-          const mockProjectsData = await projectService.getAllProjects();
-          setProjects(mockProjectsData);
-        } catch (mockError) {
-          console.error('Even mock data failed:', mockError);
-          setProjects([]);
-        }
-      } else {
-        setProjects([]);
-      }
+      setProjects([]);
     } finally {
       await new Promise(resolve => setTimeout(resolve, 500));
       setLoading(false);
@@ -115,7 +95,6 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
   // Handle project deletion
   const handleProjectDelete = async (projectId) => {
     try {
-      console.log('🗑️ Deleting project with ID:', projectId);
       await projectService.deleteProject(projectId);
       
       // Remove the project from both arrays
@@ -129,14 +108,12 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
       setProjects(updatedProjects);
       setFilteredProjects(updatedFilteredProjects);
       
-      console.log('✅ Project deleted successfully, staying on current page');
       toast.success('Project deleted successfully');
       
       // Explicitly prevent any navigation that might be triggered
       return false; // Indicate that no navigation should occur
       
     } catch (error) {
-      console.error('❌ Error deleting project:', error);
       toast.error('Failed to delete project: ' + error.message);
       return false; // Ensure no navigation on error
     }
@@ -191,8 +168,6 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
     
 
     setFilteredProjects(filtered);
-    console.log(`🔍 Applied filters:`, filters);
-    console.log(`📊 Filtered projects: ${filtered.length}/${projects.length}`);
   };
 
   // Handle project deletion
@@ -204,7 +179,6 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
     if (!confirmDelete) return false; // Return false to indicate no action taken
 
     try {
-      console.log('🗑️ Deleting project with ID:', projectId);
       await projectService.deleteProject(projectId);
       
       // Remove the project from both arrays
@@ -218,14 +192,12 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
       setProjects(updatedProjects);
       setFilteredProjects(updatedFilteredProjects);
       
-      console.log('✅ Project deleted successfully, staying on current page');
       toast.success('Project deleted successfully');
       
       // Explicitly prevent any navigation that might be triggered
       return false; // Indicate that no navigation should occur
       
     } catch (error) {
-      console.error('❌ Error deleting project:', error);
       toast.error('Failed to delete project: ' + error.message);
       return false; // Ensure no navigation on error
     }
@@ -234,8 +206,6 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
   // Handle project status update
   const handleStatusUpdate = async (projectId, newStatus) => {
     try {
-      console.log(`🔄 Updating project ${projectId} status to ${newStatus}`);
-      
       // Update the project in both arrays
       const updateProjectStatus = (projectList) => 
         projectList.map(project => {
@@ -249,11 +219,9 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
       setProjects(updateProjectStatus(projects));
       setFilteredProjects(updateProjectStatus(filteredProjects));
 
-      console.log('✅ Project status updated successfully in UI');
       toast.success(`Project status updated to ${newStatus.toLowerCase().replace('_', ' ')}`);
       
     } catch (error) {
-      console.error('❌ Error updating project status in UI:', error);
       toast.error('Failed to update project status: ' + error.message);
     }
   };
@@ -261,8 +229,6 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
   // Handle project update (when project details are modified)
   const handleProjectUpdate = async (updatedProject) => {
     try {
-      console.log('🔄 Updating project in UI:', updatedProject);
-      
       // Update the project in both arrays
       const updateProject = (projectList) => 
         projectList.map(project => {
@@ -277,11 +243,9 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
       setProjects(updateProject(projects));
       setFilteredProjects(updateProject(filteredProjects));
 
-      console.log('✅ Project updated successfully in UI');
       toast.success('Project updated successfully');
       
     } catch (error) {
-      console.error('❌ Error updating project in UI:', error);
       toast.error('Failed to update project: ' + error.message);
     }
   };
@@ -377,10 +341,7 @@ const ProjectList = ({ filters, viewMode = 'grid' }) => {
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No projects found</h3>
             <p className="text-gray-600 mb-6">
-              {shouldUseMockData() 
-                ? "Start by creating your first project to see it appear here." 
-                : "Connect to your backend or create your first project to get started."
-              }
+              Start by creating your first project to see it appear here.
             </p>
           </div>
         </div>

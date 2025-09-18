@@ -5,6 +5,7 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 import javax.crypto.KeyGenerator;
@@ -13,7 +14,9 @@ import javax.crypto.SecretKey;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import ca.sheridancollege.pajaynar.exception.InvalidTokenException;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -22,8 +25,8 @@ import io.jsonwebtoken.security.Keys;
 public class JwtService {
 
 	private String secretKey = "";
-	
-	public JwtService ( ) {
+
+	public JwtService() {
 		try {
 			KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA256");
 			SecretKey sk = keyGen.generateKey();
@@ -32,76 +35,64 @@ public class JwtService {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public String generateToken(String username) {
-		
-		//1. Define the claims
+
+		// 1. Define the claims
 		Map<String, Object> claims = new HashMap<>();
-		
-		//2.Generate Token
-		return Jwts
-			.builder()
-			.claims()
-			.add(claims)
-			.subject(username)
-			.issuedAt( new Date(System.currentTimeMillis()))
-			.expiration( new Date(System.currentTimeMillis() + 1000*60*100)) //100min
-			.and()
-			.signWith(getKey())
-			.compact();
-		
-		
-		//return "";
-    }
+
+		// 2.Generate Token
+		return Jwts.builder().claims().add(claims).subject(username).issuedAt(new Date(System.currentTimeMillis()))
+				.expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 100)) // 100min
+				.and().signWith(getKey()).compact();
+
+		// return "";
+	}
 
 	private SecretKey getKey() {
 		byte[] keyBytes = Decoders.BASE64.decode(secretKey);
 		return Keys.hmacShaKeyFor(keyBytes);
-		//return null;
+		// return null;
 	}
-	
+
 	public boolean validateToken(String token, UserDetails userDetails) {
 		String username = extractUsername(token);
 		return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
-		//return true;
+		// return true;
 	}
-	
-	private boolean isTokenExpired(String token) {
+
+	public boolean isTokenExpired(String token) {
 		System.out.println("Inside isTokenExpired");
 		return extractExpiration(token).before(new Date());
 	}
-	
+
 	private Date extractExpiration(String token) {
 		System.out.println("Inside extractExpiration");
 		return extractClaim(token, Claims::getExpiration);
 	}
-	
+
 	public String extractUsername(String token) {
-		return extractClaim ( token , Claims::getSubject);
+		return extractClaim(token, Claims::getSubject);
+	}
+
+	private <T> T extractClaim(String token, Function<Claims, T> claimResolver) {
+	    return extractAllClaims(token)
+	            .map(claimResolver)
+	            .orElseThrow(() -> new InvalidTokenException("Token validation failed"));
 	}
 	
-	private <T> T extractClaim(String token , Function<Claims, T> claimResolver) {
-		System.out.println("Inside extractClaim");
-		final Claims claims = extractAllClaims(token);
-		return claimResolver.apply(claims);
+	private Optional<Claims> extractAllClaims(String token) {
+	    try {
+	        Claims claims = Jwts.parser()
+	                            .verifyWith(getKey())
+	                            .build()
+	                            .parseSignedClaims(token)
+	                            .getPayload();
+	        return Optional.of(claims);
+	    } catch (JwtException e) { // catch specific JWT errors
+	        System.out.println("Invalid JWT: " + e.getMessage());
+	        return Optional.empty();
+	    }
 	}
-	
-	private Claims extractAllClaims ( String token) {
-		System.out.println("Inside extractAllClaims");
-		System.out.println("token " + token);
-		System.out.println(Jwts
-				.parser()
-				.verifyWith(getKey())
-				.build()
-				.parseSignedClaims(token)
-				.getPayload());
-		return Jwts
-				.parser()
-				.verifyWith(getKey())
-				.build()
-				.parseSignedClaims(token)
-				.getPayload();
-	}
-	
-	
+
 }

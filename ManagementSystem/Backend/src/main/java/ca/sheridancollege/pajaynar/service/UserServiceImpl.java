@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import ca.sheridancollege.pajaynar.beans.Users;
+import ca.sheridancollege.pajaynar.exception.InvalidTokenException;
 import ca.sheridancollege.pajaynar.repository.UserRepo;
 import ca.sheridancollege.pajaynar.response.AuthResponse;
 
@@ -100,9 +101,10 @@ public class UserServiceImpl implements UserService {
 		return optionalUser.get();
 	}
 
-	@Override
-	public Users updateUsersProjectSize(Users user, int number) {
-		user.setProjectSize(user.getProjectSize() + number);
-		return userRepo.save(user);
+	public Boolean isLoggedIn(String token) throws InvalidTokenException {
+		
+		
+		return !jwtService.isTokenExpired(token);
 	}
+	
 }

@@ -1,10 +1,4 @@
 // Data Source Configuration
-// Change this flag to switch between mock data and server data
-export const USE_MOCK_DATA = false; // Set to true temporarily to debug the JSON issue and enable team member data
-
-// You can also use environment variables for different environments
-// export const USE_MOCK_DATA = import.meta.env.DEV;
-
 export const DATA_SOURCE_CONFIG = {
   // API endpoints (used when USE_MOCK_DATA is false)
   API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
@@ -36,18 +30,10 @@ export const DATA_SOURCE_CONFIG = {
   
   // Authentication configuration
   auth: {
-    tokenKey: 'token', // Key used to store token in localStorage (changed from 'authToken' to 'token')
+    tokenKey: 'token', // Key used to store token in localStorage
     headerName: 'Authorization', // Header name for token
     tokenPrefix: 'Bearer ', // Prefix for token (e.g., 'Bearer ', 'Token ', or empty string)
   },
-  
-  // Mock data configuration
-  mockDelay: 500, // Simulate network delay in milliseconds (0 to disable)
-};
-
-// Helper function to determine if we should use mock data
-export const shouldUseMockData = () => {
-  return USE_MOCK_DATA;
 };
 
 // Helper function to get API URL

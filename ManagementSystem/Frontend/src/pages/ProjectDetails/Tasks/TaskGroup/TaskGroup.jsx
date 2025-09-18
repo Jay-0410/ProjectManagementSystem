@@ -68,7 +68,6 @@ const TaskGroup = ({ type, tasks, project, onTaskUpdate }) => {
     try {
       setUpdatingTasks(prev => new Set(prev).add(taskId));
       setOpenDropdown(null); // Close dropdown
-      console.log('🔄 Updating task status:', { taskId, newStatus });
       
       await issueService.updateIssueStatus(taskId, newStatus);
       toast.success(`Task moved to ${newStatus.replace('_', ' ').toLowerCase()}`);
@@ -78,7 +77,6 @@ const TaskGroup = ({ type, tasks, project, onTaskUpdate }) => {
         onTaskUpdate();
       }
     } catch (error) {
-      console.error('❌ Error updating task status:', error);
       toast.error('Failed to update task status: ' + error.message);
     } finally {
       setUpdatingTasks(prev => {
@@ -102,17 +100,15 @@ const TaskGroup = ({ type, tasks, project, onTaskUpdate }) => {
 
     try {
       setUpdatingTasks(prev => new Set(prev).add(taskToDelete));
-      console.log('🗑️ Deleting task:', taskToDelete);
       
       await issueService.deleteIssue(taskToDelete);
       toast.success('Task deleted successfully');
       
-      // Notify parent component to refresh
+      // Notify parent component to remove the deleted task immediately
       if (onTaskUpdate) {
-        onTaskUpdate();
+        onTaskUpdate(null, taskToDelete); // Pass deletedTaskId as second parameter
       }
     } catch (error) {
-      console.error('❌ Error deleting task:', error);
       toast.error('Failed to delete task: ' + error.message);
     } finally {
       setUpdatingTasks(prev => {
@@ -133,7 +129,6 @@ const TaskGroup = ({ type, tasks, project, onTaskUpdate }) => {
 
   // Handle task edit
   const handleTaskEdit = (task) => {
-    console.log('✏️ Edit task clicked for:', task.title);
     setEditingTask(task);
     setIsEditDialogOpen(true);
     setOpenDropdown(null); // Close dropdown
@@ -141,19 +136,11 @@ const TaskGroup = ({ type, tasks, project, onTaskUpdate }) => {
 
   // Handle task updated
   const handleTaskUpdated = (updatedTask) => {
-    console.log('✅ Task updated successfully in TaskGroup:', updatedTask);
-    console.log('📝 Updated task details:', {
-      id: updatedTask?.id,
-      title: updatedTask?.title,
-      status: updatedTask?.status,
-      description: updatedTask?.description
-    });
     setIsEditDialogOpen(false);
     setEditingTask(null);
     
     // Notify parent component to refresh with updated task data
     if (onTaskUpdate) {
-      console.log('📞 Calling onTaskUpdate with updated task data');
       onTaskUpdate(updatedTask);
     }
     

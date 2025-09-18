@@ -52,12 +52,9 @@ const ShowTask = () => {
   // Load comments for the task
   const loadComments = async () => {
     try {
-      console.log(`🔄 Loading comments for task: ${taskId}`);
       const commentsData = await commentService.getCommentsByIssueId(taskId);
       setComments(commentsData);
-      console.log('📝 Comments loaded:', commentsData);
     } catch (error) {
-      console.error('❌ Error loading comments:', error);
       toast.error('Failed to load comments');
     }
   };
@@ -72,16 +69,13 @@ const ShowTask = () => {
 
     setIsSubmittingComment(true);
     try {
-      console.log(`📝 Submitting comment for task: ${taskId}`);
       const createdComment = await commentService.createComment(taskId, newComment.trim());
       
       // Add the new comment to the list
       setComments(prevComments => [...prevComments, createdComment]);
       setNewComment('');
       toast.success('Comment added successfully');
-      console.log('✅ Comment submitted:', createdComment);
     } catch (error) {
-      console.error('❌ Error submitting comment:', error);
       toast.error('Failed to add comment');
     } finally {
       setIsSubmittingComment(false);
@@ -91,15 +85,12 @@ const ShowTask = () => {
   // Handle comment deletion
   const handleDeleteComment = async (commentId) => {
     try {
-      console.log(`🗑️ Deleting comment: ${commentId}`);
       await commentService.deleteComment(commentId);
       
       // Remove the comment from the list
       setComments(prevComments => prevComments.filter(comment => comment.id !== commentId));
       toast.success('Comment deleted successfully');
-      console.log('✅ Comment deleted');
     } catch (error) {
-      console.error('❌ Error deleting comment:', error);
       toast.error('Failed to delete comment');
     }
   };
@@ -111,8 +102,6 @@ const ShowTask = () => {
         setLoading(true);
         setError(null);
         
-        console.log(`Fetching task details for taskId: ${taskId}, projectId: ${projectId}`);
-        
         // Fetch task details
         const [taskData, projectData] = await Promise.all([
           issueService.getTaskById(taskId),
@@ -120,7 +109,6 @@ const ShowTask = () => {
         ]);
         
         if (taskData) {
-          console.log('Task data received:', taskData);
           setTask(taskData);
         } else {
           setError('Task not found');
@@ -128,16 +116,12 @@ const ShowTask = () => {
         }
 
         if (projectData) {
-          console.log('Project data received:', projectData);
           setProject(projectData);
-        } else {
-          console.warn('Project data not found, task might still have project info');
         }
 
         // Load comments after task is loaded
         await loadComments();
       } catch (err) {
-        console.error('Error fetching task/project details:', err);
         setError(err.message || 'Failed to fetch task details');
         toast.error(err.message || 'Failed to fetch task details');
       } finally {
@@ -168,8 +152,6 @@ const ShowTask = () => {
 
   const handleStatusChange = async (newStatus) => {
     try {
-      console.log('Updating task status to:', newStatus);
-      
       const updatedTask = await issueService.updateIssueStatus(task.id, newStatus);
       
       if (updatedTask) {
@@ -177,7 +159,6 @@ const ShowTask = () => {
         toast.success(`Task status updated to ${newStatus.toLowerCase().replace('_', ' ')}`);
       }
     } catch (err) {
-      console.error('Error updating task status:', err);
       toast.error(err.message || 'Failed to update task status');
     }
   };
@@ -185,26 +166,21 @@ const ShowTask = () => {
   const handleDeleteTask = async () => {
     if (window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
       try {
-        console.log('Deleting task:', task.id);
-        
         await issueService.deleteIssue(task.id);
         
         toast.success('Task deleted successfully');
         navigate(`/project/${projectId}`);
       } catch (err) {
-        console.error('Error deleting task:', err);
         toast.error(err.message || 'Failed to delete task');
       }
     }
   };
 
   const handleEditTask = () => {
-    console.log('✏️ Edit task clicked for:', task.title);
     setIsEditDialogOpen(true);
   };
 
   const handleTaskUpdated = async (updatedTask) => {
-    console.log('✅ Task updated successfully:', updatedTask);
     setIsEditDialogOpen(false);
     
     // Update the task state with the new data

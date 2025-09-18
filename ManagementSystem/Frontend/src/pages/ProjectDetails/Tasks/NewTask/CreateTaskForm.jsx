@@ -121,14 +121,12 @@ const CreateTaskForm = ({ onTaskCreated, onTaskUpdated, project, taskToEdit = nu
   React.useEffect(() => {
     const loadTeamMembers = async () => {
       if (!project) {
-        console.warn('No project data available, cannot load team members');
         setTeamMembers([]);
         return;
       }
       
       try {
         setLoadingTeamMembers(true);
-        console.log('🔄 Loading team members from project data:', project.projectName || project.name);
         
         // Use team members from project data
         let members = [];
@@ -146,7 +144,6 @@ const CreateTaskForm = ({ onTaskCreated, onTaskUpdated, project, taskToEdit = nu
             isCurrentUser: member.isCurrentUser || false,
             role: member.role || 'Member'
           }));
-          console.log('✅ Using project team members:', members);
         } else if (project.teamMembers && Array.isArray(project.teamMembers) && project.teamMembers.length > 0) {
           // Alternative property name for team members
           members = project.teamMembers.map(member => ({
@@ -160,7 +157,6 @@ const CreateTaskForm = ({ onTaskCreated, onTaskUpdated, project, taskToEdit = nu
             isCurrentUser: member.isCurrentUser || false,
             role: member.role || 'Member'
           }));
-          console.log('✅ Using project teamMembers:', members);
         } else {
           // Fallback: Include project owner if no team members
           if (project.owner) {
@@ -176,7 +172,6 @@ const CreateTaskForm = ({ onTaskCreated, onTaskUpdated, project, taskToEdit = nu
               isCurrentUser: project.owner.isCurrentUser || false,
               role: 'Owner'
             }];
-            console.log('✅ Using project owner as assignee option:', members);
           }
         }
         
@@ -192,21 +187,15 @@ const CreateTaskForm = ({ onTaskCreated, onTaskUpdated, project, taskToEdit = nu
         setTeamMembers(members || []);
         
         if (!members || members.length === 0) {
-          console.warn('⚠️ No team members found in project data');
           // Don't show error toast for empty team members - this is normal for new projects
-          console.log('ℹ️ Task can still be created without assignee');
         } else {
-          console.log(`✅ ${members.length} team members loaded from project data`);
-          
           // Auto-select current user if available and no assignee is already selected
           const currentUser = members.find(member => member.isCurrentUser);
           if (currentUser && !form.getValues('assigneeId')) {
-            console.log('🎯 Auto-selecting current user:', currentUser);
             form.setValue('assigneeId', currentUser.id.toString());
           }
         }
       } catch (error) {
-        console.error('❌ Error loading team members from project:', error);
         // Only show error for actual loading failures, not empty data
         if (error.message && !error.message.includes('404') && !error.message.includes('not found')) {
           toast.error('Failed to load team members: ' + error.message);
@@ -222,15 +211,7 @@ const CreateTaskForm = ({ onTaskCreated, onTaskUpdated, project, taskToEdit = nu
 
   // Handle form submission
   const onSubmit = async (data) => {
-    console.log('🚀 Form submitted with data:', data);
-    
-    // Debug form data serialization
-    if (window.testFormDataSerialization) {
-      window.testFormDataSerialization(data);
-    }
-    
     if (!projectId) {
-      console.error('❌ Project ID is missing. Cannot create task.');
       toast.error('Project ID is missing. Cannot create task.');
       return;
     }
@@ -261,19 +242,6 @@ const CreateTaskForm = ({ onTaskCreated, onTaskUpdated, project, taskToEdit = nu
         assigneeDetails: assigneeDetails // Include full assignee details for frontend use
       };
 
-      console.log('📤 Form data received:', data);
-      console.log('📤 Selected assignee details:', assigneeDetails);
-      console.log('📤 Formatted task data:', taskData);
-      console.log('📤 Data types check:');
-      console.log('  title:', typeof taskData.title, taskData.title);
-      console.log('  description:', typeof taskData.description, taskData.description);
-      console.log('  status:', typeof taskData.status, taskData.status);
-      console.log('  priority:', typeof taskData.priority, taskData.priority);
-      console.log('  projectId:', typeof taskData.projectId, taskData.projectId);
-      console.log('  dueDate:', typeof taskData.dueDate, taskData.dueDate);
-      console.log('  userId (assignee):', typeof taskData.userId, taskData.userId);
-      console.log('  assigneeUsername:', typeof taskData.assigneeUsername, taskData.assigneeUsername);
-
       // Validate required fields
       if (!taskData.title) {
         toast.error('Task title is required');
@@ -287,13 +255,11 @@ const CreateTaskForm = ({ onTaskCreated, onTaskUpdated, project, taskToEdit = nu
       // Call the issue service to create or update the task
       let result;
       if (isEditMode) {
-        console.log('🔄 Updating task with ID:', taskToEdit.id);
         const editableTaskData = {
           ...taskData,
           assignee : {username : assigneeDetails?.username || null},
         };
         result = await issueService.updateTask(taskToEdit.id, editableTaskData);
-        console.log('✅ Task updated successfully:', result);
         toast.success('Task updated successfully!');
         
         // Notify parent component about update
@@ -301,9 +267,7 @@ const CreateTaskForm = ({ onTaskCreated, onTaskUpdated, project, taskToEdit = nu
           onTaskUpdated(result);
         }
       } else {
-        console.log('🆕 Creating new task');
-        result = await issueService.createIssue(taskData, projectId);
-        console.log('✅ Task created successfully:', result);
+        result = await issueService.createIssue(projectId, taskData);
         toast.success('Task created successfully!');
         
         // Notify parent component about creation
@@ -319,23 +283,15 @@ const CreateTaskForm = ({ onTaskCreated, onTaskUpdated, project, taskToEdit = nu
       }
       
     } catch (error) {
-      console.error(`❌ Error ${isEditMode ? 'updating' : 'creating'} task:`, error);
-      
       // Provide a more specific error message
       let errorMessage = `Failed to ${isEditMode ? 'update' : 'create'} task. Please try again.`;
       
-      if (error.message) {
-        // If error message is vague or empty, provide more context
-        if (error.message.trim() === '' || 
-            error.message.toLowerCase().includes('no message') || 
-            error.message === 'undefined') {
-          errorMessage = `Failed to ${isEditMode ? 'update' : 'create'} task. Please check your input and try again.`;
-        } else {
-          errorMessage = error.message;
-        }
+      if (error.message && error.message.trim() && 
+          !error.message.toLowerCase().includes('no message') && 
+          error.message !== 'undefined') {
+        errorMessage = error.message;
       }
       
-      console.log('🔍 Final error message to display:', errorMessage);
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
